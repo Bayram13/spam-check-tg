@@ -58,12 +58,10 @@ Botu qrupa əlavə edin və **admin** edin. Bu icazələr LAZIMDIR:
 5. **Create Web Service** → loglarda `Webhook rejimi işə düşdü` görünməlidir.
 
 > ⚠️ **Render pulsuz (free) Web Service 15 dəq fəaliyyətsizlikdən sonra yatır.**
-> Yuxu zamanı yeni qoşulan üzvlər gec doğrulana bilər (Telegram bir müddət
-> yenidən cəhd edir, ilk sorğu botu oyadır). Daimi (24/7) iş üçün:
-> - pulsuz qalmaq istəyirsinizsə xarici bir "ping" servisi ilə hər 10 dəq URL-ə
->   sorğu göndərin (məs. UptimeRobot), **və ya**
-> - pulsuz **Background Worker** + `MODE=polling` istifadə edin (port lazım deyil),
->   **və ya** ödənişli plan seçin.
+> Daimi (24/7) iş üçün tövsiyə: `MODE=polling` istifadə edin (aşağıda) və
+> UptimeRobot ilə hər 5 dəq `/health` endpoint-inə ping göndərin. Bot polling
+> rejimində `PORT`-da kiçik bir sağlamlıq serveri açır (`/health` → `200 OK`),
+> beləcə Render port tələbini ödəyir və UptimeRobot yaşıl statusda qalır.
 
 ### Variant C — Background Worker (polling)
 - Render → **New** → **Background Worker**.

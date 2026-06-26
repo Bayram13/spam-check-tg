@@ -18,6 +18,8 @@ Konfiqurasiya (mühit dəyişənləri / environment variables):
 import asyncio
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from telegram import (
     Update,
@@ -31,7 +33,9 @@ from telegram.ext import (
     Application,
     ChatMemberHandler,
     CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
+    filters,
 )
 
 from captcha import random_code, make_captcha_image, make_options
@@ -93,6 +97,16 @@ UNMUTED = ChatPermissions(
 
 def _key(chat_id: int, user_id: int) -> str:
     return f"{chat_id}:{user_id}"
+
+
+async def on_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Şəxsi çatda /start yazıldıqda."""
+    if update.message:
+        await update.message.reply_text(
+            "✅ Bot aktivdir və işləyir.\n\n"
+            "Məni qrupa admin (Ban users + Delete messages icazələri ilə) "
+            "əlavə edin — yeni üzvlər üçün robot doğrulaması göndərəcəm."
+        )
 
 
 async def on_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -263,6 +277,33 @@ async def on_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 log.error("Atmaq alınmadı: %s", e)
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    """UptimeRobot / Render üçün sadə sağlamlıq endpoint-i."""
+
+    def do_GET(self):
+        if self.path in ("/", "/health", "/healthz"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"OK")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_HEAD(self):
+        self.do_GET()
+
+    def log_message(self, *args):
+        pass  # gərəksiz logları susdur
+
+
+def start_health_server(port: int) -> None:
+    """PORT-da kiçik HTTP serveri (ayrı thread-də) — Render port binding + /health."""
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    log.info("Sağlamlıq serveri işə düşdü: 0.0.0.0:%s (/health)", port)
+
+
 def main() -> None:
     if not BOT_TOKEN:
         raise SystemExit("BOT_TOKEN mühit dəyişəni təyin edilməyib!")
@@ -276,6 +317,7 @@ def main() -> None:
 
     app = Application.builder().token(BOT_TOKEN).build()
 
+    app.add_handler(CommandHandler("start", on_start, filters=filters.ChatType.PRIVATE))
     app.add_handler(ChatMemberHandler(on_member, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(CallbackQueryHandler(on_answer, pattern=r"^cap:"))
 
@@ -297,6 +339,8 @@ def main() -> None:
         )
     else:
         log.info("Polling rejimi işə düşdü. CTRL+C ilə dayandırın.")
+        # Render Web Service üçün PORT-a bağlanmaq + /health (UptimeRobot) lazımdır.
+        start_health_server(PORT)
         # chat_member yeniliklərini almaq üçün allowed_updates vacibdir
         app.run_polling(
             allowed_updates=Update.ALL_TYPES,

@@ -14,7 +14,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.4"
       - key: MODE
-        value: webhook
+        value: polling
       - key: CAPTCHA_TIMEOUT
         value: "30"
       - key: CAPTCHA_OPTIONS
