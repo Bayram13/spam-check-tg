@@ -1,0 +1,22 @@
+# Render.com Blueprint — Web Service (webhook rejimi)
+# Render Dashboard -> New -> Blueprint -> bu repo-nu seçin.
+# BOT_TOKEN-i Render panelində əl ilə daxil edin (sync: false).
+services:
+  - type: web
+    name: tg-captcha-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false          # Render panelində əl ilə daxil edin
+      - key: MODE
+        value: webhook
+      - key: CAPTCHA_TIMEOUT
+        value: "30"
+      - key: CAPTCHA_OPTIONS
+        value: "4"
+      - key: KICK_ON_FAIL
+        value: "0"
+      # PORT və RENDER_EXTERNAL_URL Render tərəfindən avtomatik təyin olunur.

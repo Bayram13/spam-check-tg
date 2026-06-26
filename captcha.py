@@ -1,4 +1,5 @@
 """CAPTCHA şəkli və variantların yaradılması."""
+import os
 import random
 import string
 import io
@@ -7,8 +8,23 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 # Qarışıq görünməyən simvollar (0/O, 1/I/L kimi)
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 CODE_LEN = 5
+
+# Font: əvvəlcə layihə ilə gələn font, sonra sistem fontları (Render-də sistem
+# fontu olmaya bilər, ona görə DejaVuSans-Bold.ttf layihəyə daxil edilib).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_FONT_CANDIDATES = [
+    os.path.join(_HERE, "DejaVuSans-Bold.ttf"),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+]
+
+
+def _load_font(size: int):
+    for path in _FONT_CANDIDATES:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default()
 
 
 def random_code(length: int = CODE_LEN) -> str:
@@ -20,7 +36,7 @@ def make_captcha_image(text: str) -> io.BytesIO:
     w, h = 60 + 48 * len(text), 120
     img = Image.new("RGB", (w, h), (245, 245, 245))
     d = ImageDraw.Draw(img)
-    font = ImageFont.truetype(FONT_PATH, 58)
+    font = _load_font(58)
 
     # Səs-küy xətləri
     for _ in range(9):

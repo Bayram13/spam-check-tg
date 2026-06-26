@@ -47,6 +47,19 @@ TIMEOUT = int(os.environ.get("CAPTCHA_TIMEOUT", "30"))
 N_OPTIONS = int(os.environ.get("CAPTCHA_OPTIONS", "4"))
 KICK_ON_FAIL = os.environ.get("KICK_ON_FAIL", "0") == "1"
 
+# İşləmə rejimi: "webhook" (Render Web Service) və ya "polling" (Background Worker / lokal)
+MODE = os.environ.get("MODE", "polling").strip().lower()
+# Render avtomatik təyin edir; lokal üçün default 10000
+PORT = int(os.environ.get("PORT", "10000"))
+# Webhook üçün public URL. Render avtomatik RENDER_EXTERNAL_URL verir.
+WEBHOOK_BASE = (
+    os.environ.get("WEBHOOK_URL")
+    or os.environ.get("RENDER_EXTERNAL_URL")
+    or ""
+).strip().rstrip("/")
+# İstəyə görə əlavə təhlükəsizlik (Telegram-ın göndərdiyini təsdiqləyir)
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
+
 # Tam susdurma icazələri (heç nə yaza bilməz)
 MUTED = ChatPermissions(
     can_send_messages=False,
@@ -61,9 +74,19 @@ MUTED = ChatPermissions(
     can_add_web_page_previews=False,
 )
 
-# Normal üzv icazələri (mute götürüləndə bərpa olunur)
+# Doğrulamadan keçəndən sonrakı icazələr:
+# YALNIZ mətn mesajı göndərə bilir; şəkil/video/audio/sənəd/poll/link və s. YOX.
 UNMUTED = ChatPermissions(
-    can_send_messages=True,
+    can_send_messages=True,        # yalnız mətn mesajı
+    can_send_audios=False,
+    can_send_documents=False,
+    can_send_photos=False,
+    can_send_videos=False,
+    can_send_video_notes=False,
+    can_send_voice_notes=False,
+    can_send_polls=False,
+    can_send_other_messages=False,   # stiker/GIF/inline botlar
+    can_add_web_page_previews=False,
 )
 
 
@@ -248,9 +271,29 @@ def main() -> None:
     app.add_handler(ChatMemberHandler(on_member, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(CallbackQueryHandler(on_answer, pattern=r"^cap:"))
 
-    log.info("Bot işə düşdü. CTRL+C ilə dayandırın.")
-    # chat_member yeniliklərini almaq üçün allowed_updates vacibdir
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    if MODE == "webhook":
+        if not WEBHOOK_BASE:
+            raise SystemExit(
+                "Webhook rejimi üçün WEBHOOK_URL və ya RENDER_EXTERNAL_URL lazımdır!"
+            )
+        webhook_url = f"{WEBHOOK_BASE}/{BOT_TOKEN}"
+        log.info("Webhook rejimi işə düşdü: %s (port %s)", webhook_url, PORT)
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=webhook_url,
+            secret_token=WEBHOOK_SECRET or None,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+        )
+    else:
+        log.info("Polling rejimi işə düşdü. CTRL+C ilə dayandırın.")
+        # chat_member yeniliklərini almaq üçün allowed_updates vacibdir
+        app.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+        )
 
 
 if __name__ == "__main__":
