@@ -11,6 +11,8 @@ services:
     envVars:
       - key: BOT_TOKEN
         sync: false          # Render panelində əl ilə daxil edin
+      - key: PYTHON_VERSION
+        value: "3.12.4"
       - key: MODE
         value: webhook
       - key: CAPTCHA_TIMEOUT

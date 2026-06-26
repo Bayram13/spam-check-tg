@@ -15,6 +15,7 @@ Konfiqurasiya (mühit dəyişənləri / environment variables):
   CAPTCHA_OPTIONS    -> variant sayı (default 4)
   KICK_ON_FAIL       -> "1" olarsa yanlış/vaxt bitəndə qrupdan atır (default 0 = sadəcə mute qalır)
 """
+import asyncio
 import logging
 import os
 
@@ -265,6 +266,13 @@ async def on_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     if not BOT_TOKEN:
         raise SystemExit("BOT_TOKEN mühit dəyişəni təyin edilməyib!")
+
+    # Python 3.12+/3.14 uyğunluğu: əsas thread-də event loop təmin et
+    # (PTB run_webhook/run_polling asyncio.get_event_loop() çağırır).
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     app = Application.builder().token(BOT_TOKEN).build()
 
